@@ -5,29 +5,35 @@ date: "2024-09-13"
 ---
 
 ```{r}
+# # First, you need to have the devtools package installed
+# install.packages("devtools")
+# # now, install the vdemdata package directly from GitHub
+# devtools::install_github("vdeminstitute/vdemdata")
+# library(vdemdata)
 
+```
+
+
+```{r}
 
 library(tidyverse)
 
-library(dplyr)
-library(plyr)
-library(readr)
 library(ggplot2)
 library(reshape2)
 library(vdemdata)
-library(stringr)
 library(countrycode)
 library(GGally)
 library(broom)
 
 library(MASS)
+
 ```
 
 ```{r}
-file_list <- list.files(path = "~/governemnt_takedown", pattern ="PRPL-Facebook-Government-Report-20?", full.names = TRUE) 
+file_list <- list.files(path = "~/joe_sturla_r/2024_takedown_analysis/data/", pattern ="PRPL-Facebook-Government-Report-20?", full.names = TRUE) 
 data_list <- list()
 
-
+file_list
 ```
 
 
@@ -115,7 +121,7 @@ names(initial_df)
 #Remove columns with no data
 
 
-combined_df <- combined_df |> select(where(~ any(!is.na(.))))
+combined_df <- combined_df |> dplyr::select(where(~ any(!is.na(.))))
 combined_df |> filter(!is.na(Total.Requests.Percentage)) -> combined_df
 combined_df$Platform <- "Facebook"
 #add platform column, 
@@ -125,7 +131,7 @@ head(combined_df)
 #combined_df <- subset(combined_df, select = -platform)
 #head(combined_df)
 #reorder columns
-combined_df <- combined_df %>% select(Platform, Date, everything())
+combined_df <- combined_df %>% dplyr::select(Platform, Date, everything())
 
 ```
 #is there anything based on the local office
@@ -142,12 +148,13 @@ names(combined_df)
 ```{r}
 combined_df$Content.Restrictions <- coalesce(combined_df$Content.Restrictions, combined_df$Content.Restricted)
 
-combined_df <- combined_df |> select(-Content.Restricted)
+
+combined_df <- combined_df |> dplyr::select(-Content.Restricted)
 ```
 
 
 ```{r}
-combined_df <- combined_df %>% select(Platform, Date,Country, Content.Restrictions, everything())
+combined_df <- combined_df %>% dplyr::select(Platform, Date,Country, Content.Restrictions, everything())
 names(combined_df)
 
 #does content restrictions change by country
@@ -250,9 +257,9 @@ combined_df |>
     Country == "Kosovo" ~ "XKX",
     Country == "Somaliland" ~ "SML",
     TRUE ~ country_code
-  )) |> left_join(vdem |> select(country_name, country_text_id, year, v2x_libdem), 
+  )) |> left_join(vdem |> dplyr::select(country_name, country_text_id, year, v2x_libdem), 
             by = c("country_code" = "country_text_id", "year" = "year")) |>
-  select(Country, country_name, country_code, year, everything()) -> combined_df
+  dplyr::select(Country, country_name, country_code, year, everything()) -> combined_df
 
 #combined_df
 combined_df |> filter(is.na(v2x_libdem)) -> trouble_names_df
@@ -272,12 +279,12 @@ combined_df |> filter(!is.na(v2x_libdem)) -> combined_df
 
 ```{r}
 #Load population, %population data
-pop_df <- read_csv("API_IT.NET.USER.ZS_DS2_en_csv_v2_3409961.csv", col_names = TRUE, skip=4)
+pop_df <- read_csv("../data/API_IT.NET.USER.ZS_DS2_en_csv_v2_3409961.csv", col_names = TRUE, skip=4)
 #head(pop_df)
 #help(read_csv)
 
-pop_df <- pop_df |> select(c(`Country Name`, `Country Code`) | starts_with('201') | starts_with('202')) |>
-  select(!c("2010", "2011", "2012"))
+pop_df <- pop_df |> dplyr::select(c(`Country Name`, `Country Code`) | starts_with('201') | starts_with('202')) |>
+  dplyr::select(!c("2010", "2011", "2012"))
 #names(pop_df)
 #help(select)
 ```
@@ -357,7 +364,7 @@ joined_combined_df |>
 
 
 ```{r}
-
+#checking NAs, 0 is good
 combined_df |> filter(is.na(percent_pop_on_internet))
 sum(is.na(combined_df$percent_pop_on_internet))
 ```
@@ -368,13 +375,13 @@ sum(is.na(combined_df$percent_pop_on_internet))
 
 #Pineapple
 
-flat_pop_df <- read_csv("API_SP.POP.TOTL_DS2_en_csv_v2_3401680.csv", col_names = TRUE, skip=4)
+flat_pop_df <- read_csv("../data/API_SP.POP.TOTL_DS2_en_csv_v2_3401680.csv", col_names = TRUE, skip=4)
 head(flat_pop_df)
 
 
 flat_pop_df <- flat_pop_df |> 
-  select(c(`Country Code`) | starts_with('201') | starts_with('202')) |>
-  select(!c("2010", "2011", "2012"))
+  dplyr::select(c(`Country Code`) | starts_with('201') | starts_with('202')) |>
+  dplyr::select(!c("2010", "2011", "2012"))
 names(flat_pop_df)
 
 
@@ -413,15 +420,15 @@ combined_df
 #rewriting to add in country offices
 
 ```{r}
-office_df <- read_csv("Local-Offices-1.csv", col_names = TRUE)
+office_df <- read_csv("../data/Local-Offices-1.csv", col_names = TRUE)
 head(office_df)
 
 help(rename)
 office_df <- office_df |> 
-  mutate("has_facebook_office" = `Facebook Office (1-0)`,
+  dplyr::mutate("has_facebook_office" = `Facebook Office (1-0)`,
          "has_twitter_office" = `Twitter Office (1-0)`,
          "has_google_office" = `Google Office (1-0)` ) |>
-  select(-c(`Facebook Office (1-0)`,`Twitter Office (1-0)`,`Google Office (1-0)`))
+  dplyr::select(-c(`Facebook Office (1-0)`,`Twitter Office (1-0)`,`Google Office (1-0)`))
 head(office_df)
 
 
@@ -445,8 +452,8 @@ combined_df <- combined_df |>
 
 combined_df |> names()
 
-combined_df |> mutate(Country = Country.x) |> select(-c(Country.y, Country.x)) |>
-  select(Country, everything()) -> combined_df
+combined_df |> mutate(Country = Country.x) |> dplyr::select(-c(Country.y, Country.x)) |>
+  dplyr::select(Country, everything()) -> combined_df
 
 #combined_df |> select(-c(has_facebook_office, has_google_office, has_twitter_office)) ->
 #  combined_df
@@ -463,13 +470,13 @@ combined_df |> mutate(Country = Country.x) |> select(-c(Country.y, Country.x)) |
 ```{r}
 #mango
 
-gdp_df <- read_csv("API_NY.GDP.MKTP.CD_DS2_en_csv_v2_31795.csv", col_names = TRUE, skip=4)
+gdp_df <- read_csv("../data/API_NY.GDP.MKTP.CD_DS2_en_csv_v2_31795.csv", col_names = TRUE, skip=4)
 head(gdp_df)
 
 
 gdp_df <- gdp_df |> 
-  select(c(`Country Name`, `Country Code`)| starts_with('201') | starts_with('202')) |>
-  select(!c("2010", "2011", "2012"))
+  dplyr::select(c(`Country Name`, `Country Code`)| starts_with('201') | starts_with('202')) |>
+  dplyr::select(!c("2010", "2011", "2012"))
 names(gdp_df)
 
 ```
@@ -482,7 +489,7 @@ names(gdp_df)
 #pivot longer to group cols 
 gdp_df_fixed <- gdp_df |> pivot_longer(cols = starts_with('20'), names_to = "year", values_to = "GDP")
 names(gdp_df_fixed)
-gdp_df_fixed |> select(-`Country Name`) -> gdp_df_fixed
+gdp_df_fixed |> dplyr::select(-`Country Name`) -> gdp_df_fixed
 
 
 gdp_df_fixed$year <- as.numeric(gdp_df_fixed$year)
@@ -501,7 +508,7 @@ gdp_df_fixed$year <- as.numeric(gdp_df_fixed$year)
 
 
 combined_df |> left_join(gdp_df_fixed, by = c("country_code" = "Country Code", "year" = "year")) -> joined_combined_df
-joined_combined_df |> select(c(Country,country_code, population, year) )
+joined_combined_df |> dplyr::select(c(Country,country_code, population, year) )
 
 joined_combined_df$country_code <- as.factor(joined_combined_df$country_code)
 
@@ -525,12 +532,12 @@ joined_combined_df -> combined_df
 
 
 ```{r}
-civic_df <- read_csv("DSP_CY_v6.csv", col_names = TRUE)
+civic_df <- read_csv("../data/DSP_CY_v6.csv", col_names = TRUE)
 head(civic_df)
 
 
 civic_df <- civic_df |> 
-  select(c("country_name", "country_text_id", "year","v2smgovsmmon", "v2smgovfilcap", "v2smarrest"))
+  dplyr::select(c("country_name", "country_text_id", "year","v2smgovsmmon", "v2smgovfilcap", "v2smarrest"))
 names(civic_df)
 
 ```
@@ -549,12 +556,12 @@ head(combined_df)
 #load in political regime type
 
 ```{r}
-regime_df <- read_csv("political-regime.csv", col_names = TRUE)
+regime_df <- read_csv("../data/political-regime.csv", col_names = TRUE)
 
 #regime_df
 
 regime_df <- regime_df |>
-  select(c("Entity","Code","Year", "Political regime"))
+  dplyr::select(c("Entity","Code","Year", "Political regime"))
 names(regime_df)
 
 regime_df <- regime_df |>
@@ -584,7 +591,7 @@ combined_df |>
     Country == "Kosovo" ~ 2,
     Country == "Egypt" ~ 1, 
     TRUE~ `Political regime`
-  )) |> select(-c(country_name.x, Entity)) -> combined_df
+  )) |> dplyr::select(-c(country_name.x, Entity)) -> combined_df
 
 
 
@@ -601,7 +608,7 @@ combined_df
 
 #Use later for assessing associations between variables
 ```{r}
-combined_df |> select(-c(`Country Name`, country_name.y )) -> combined_df
+combined_df |> dplyr::select(-c(`Country Name`, country_name.y )) -> combined_df
 
 
 
@@ -610,6 +617,94 @@ combined_df |> select(-c(`Country Name`, country_name.y )) -> combined_df
 #ggpairs(df, columns=c(..,..,..,..))
 #ggpairs(sat, columns = 2:8)
 ```
+
+#add total content restrictions by country
+
+
+
+```{r}
+file_list <- list.files(path = "~/joe_sturla_r/2024_takedown_analysis/data/", pattern ="Content_Restrictions_20?", full.names = TRUE) 
+data_list <- list()
+
+file_list
+```
+
+```{r}
+data_list <- list()
+for (file in file_list) {
+  # Read the current CSV file into a dataframe
+  #print(file)
+  df <- read.csv(file)
+  
+  # Extract the file name from the file path
+  file_name <- basename(file)
+  
+  # Extract the year and half information from the file name
+  # Assuming the format is like "PRPL-Facebook-Government-Report-YYYY_HX"
+  # Where YYYY is the year and HX is the half of the year (H1 or H2)
+  year_half <- gsub(".*_(\\d{4})_(H[12]).csv$", "\\1_\\2", file_name)
+  
+  # Split the extracted information into year and half
+  year <- sub("_(H[12])$", "", year_half)
+  half <- sub("^\\d{4}_(H[12])$", "\\1", year_half)
+  
+  # Determine the date based on the half of the year
+  if (half == "H1") {
+    date <- paste0("6/30/", year)
+  } else if (half == "H2") {
+    date <- paste0("12/31/", year)
+  } else {
+    date <- NA  # Handle unexpected cases
+  }
+  
+  # df$Total.Requests.Percentage <- df$Total.Requests.Percentage|> 
+  # str_replace_all("%|,", "")
+  # 
+  # 
+  # df$Total.Requests <- sub(" -.*", "", df$Total.Requests)
+  # df$Total.Requests <- df$Total.Requests |>
+  #   str_replace_all("%|,", "")
+  # 
+  # df$Total.Requests.Accounts <- sub(" -.*", "", df$Total.Requests.Accounts)
+  # df$Total.Requests.Accounts <- df$Total.Requests.Accounts |>
+  #   str_replace_all("%|,", "")
+  #   #unique(df$Total.Requests.Accounts)
+  # 
+  
+  for (col in names(df)) {
+    #print(col)
+    if (col != "Country") {
+      # Try to convert columns to numeric if they are not character columns
+      # This will also handle integer and double columns consistently
+      df[[col]] <- sub(" -.*", "", df[[col]])
+      df[[col]] <- df[[col]] |>
+        str_replace_all("%|,", "")
+      
+      df[[col]] <- as.numeric(df[[col]])
+    }
+  }
+  
+  # Add a new column with the date information
+  df$Date <- date
+  
+  # Append the dataframe to the list
+  data_list[[length(data_list) + 1]] <- df
+}
+
+```
+
+
+```{r}
+
+content_restrictions_df <- bind_rows(data_list)
+head(content_restrictions_df)
+unique(content_restrictions_df$count)
+```
+#TODO fix NAs from coercion above by combining totals and count columns, then removing subcategory columns, then coalescing by date + add year column.\
+
+#find out are totals for each half of the year combined currently? they should be so that year accurately represents the totals.
+
+
 
 
 
@@ -639,7 +734,7 @@ sum(is.na(model_df$Total.Requests.Percentage))
 #removing NAs/ irrelevant columns
 ```{r}
 sapply(model_df, function(x) sum(is.na(x)))
-model_df |> select(c(-starts_with('Court'), -starts_with('Legal'), -starts_with('Emergency'), -starts_with('Subpoena'), -starts_with('Pen'), -starts_with('Title'), -starts_with('Search'), -starts_with('ER'), -starts_with('Preservation'))) -> model_df_cut_cols
+model_df |> dplyr::select(c(-starts_with('Court'), -starts_with('Legal'), -starts_with('Emergency'), -starts_with('Subpoena'), -starts_with('Pen'), -starts_with('Title'), -starts_with('Search'), -starts_with('ER'), -starts_with('Preservation'))) -> model_df_cut_cols
 
 model_df_cut_cols
 model_df_cut_cols |> filter(!is.na(Total.Requests.Percentage)) ->model_df_cut_cols
@@ -652,7 +747,7 @@ model_df_cut_cols |> filter(is.na(v2x_libdem))
 ```
 
 
-#fixes column names, TODO is to remove irrelevant columns first and then to remove values that have NAs so that stepwise AIC will run properly
+#fixes column names, TODO is to remove values that have NAs so that stepwise AIC will run properly
 ```{r}
 
 #names(model_df)
@@ -667,7 +762,6 @@ model_df_cut_cols |> mutate(political_regime = `Political regime`) -> model_df_c
 #NOTE: 
 ```{r}
 
-C:/Users/Joe/Documents/governemnt_takedown/takedown_analysis.Rmd
 
 
 #Total requests number
