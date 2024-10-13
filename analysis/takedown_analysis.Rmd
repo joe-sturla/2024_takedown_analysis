@@ -593,8 +593,10 @@ combined_df |>
     TRUE~ `Political regime`
   )) |> dplyr::select(-c(country_name.x, Entity)) -> combined_df
 
+#convert dates to datetype
+typeof(combined_df$Date)
 
-
+combined_df$Date <- ymd(combined_df$Date)
 #no_regime_countries
 
 #unique(no_regime_countries$Country)
@@ -657,6 +659,7 @@ for (file in file_list) {
     date <- NA  # Handle unexpected cases
   }
   
+  
   # df$Total.Requests.Percentage <- df$Total.Requests.Percentage|> 
   # str_replace_all("%|,", "")
   # 
@@ -700,11 +703,49 @@ content_restrictions_df <- bind_rows(data_list)
 head(content_restrictions_df)
 unique(content_restrictions_df$count)
 ```
-#TODO fix NAs from coercion above by combining totals and count columns, then removing subcategory columns, then coalescing by date + add year column.\
 
-#find out are totals for each half of the year combined currently? they should be so that year accurately represents the totals.
+# fix NAs from coercion above by combining totals and count columns, 
+
+```{r}
+
+coalesce(content_restrictions_df$count, content_restrictions_df$total) -> content_restrictions_df$total
+content_restrictions_df |> dplyr::select(-count) |> dplyr::select(Country, total, Date, everything()) 
+
+#convert to date
+content_restrictions_df$Date <- mdy(content_restrictions_df$Date)
+#add year as a separate column
+content_restrictions_df$year <- year(content_restrictions_df$Date)
+```
+
+# then removing subcategory columns, then coalescing by date + add year column.\
 
 
+```{r}
+head(content_restrictions_df)
+content_restrictions_df |> dplyr::select(-c(ISO.Code, starts_with("Facebook"), starts_with("Instagram"))) -> content_restrictions_df
+
+```
+
+#add ISO country codes to countries for join, remove count column
+
+
+```{r}
+
+content_restrictions_df$country_code <- countrycode(content_restrictions_df$Country, "country.name", "iso3c")
+head(content_restrictions_df)
+
+content_restrictions_df |> dplyr::select(-count) -> content_restrictions_df
+names(content_restrictions_df)
+unique(content_restrictions_df$Date)
+unique(combined_df$Date)
+```
+
+#TODO combine content_restrictions_df and main df
+```{r}
+names(combined_df)
+combined_df |> left_join(content_restrictions_df, by=c('country_code' = 'country_code', 'Date' = 'Date'))
+
+```
 
 
 
@@ -713,6 +754,11 @@ unique(content_restrictions_df$count)
 
 #begin models
 #start with just libdem and total requests
+
+#only use date for models, NOT year, year has multiple entries for the same year and country due to split
+
+
+
 ```{r}
 names(combined_df)
 #Should contain Country, country_code, year, platform, Date, libdem, social media gov metrics, population, percent pop on internet, regime type, existence of a facebook office, GDP
@@ -761,7 +807,10 @@ model_df_cut_cols |> mutate(political_regime = `Political regime`) -> model_df_c
 
 #NOTE: 
 ```{r}
-
+#
+#ols
+#logit
+#0 inflated binomial regression
 
 
 #Total requests number
