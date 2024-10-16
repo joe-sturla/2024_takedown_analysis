@@ -1,21 +1,16 @@
 ---
 title: "government_takedown_analysis"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 date: "2024-09-13"
 ---
 
-```{r}
-# # First, you need to have the devtools package installed
-# install.packages("devtools")
-# # now, install the vdemdata package directly from GitHub
-# devtools::install_github("vdeminstitute/vdemdata")
-# library(vdemdata)
 
-```
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+library(olsrr)
 
-
-```{r}
-
+library(car)
 library(tidyverse)
 
 library(ggplot2)
@@ -29,17 +24,16 @@ library(MASS)
 
 ```
 
-```{r}
-file_list <- list.files(path = "~/joe_sturla_r/2024_takedown_analysis/data/", pattern ="PRPL-Facebook-Government-Report-20?", full.names = TRUE) 
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+file_list <- list.files(path = "~/governemnt_takedown/data/", pattern ="PRPL-Facebook-Government-Report-20?", full.names = TRUE) 
 data_list <- list()
 
-file_list
 ```
 
 
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #clean dfs so they can be combined into one file
 data_list <- list()
 for (file in file_list) {
@@ -105,7 +99,7 @@ for (file in file_list) {
 ```
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 
 initial_df <- bind_rows(data_list)
 combined_df <- initial_df
@@ -116,7 +110,7 @@ sum(is.na(initial_df$Total.Requests.Percentage))
 names(initial_df)
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 
 #Remove columns with no data
 
@@ -134,18 +128,12 @@ head(combined_df)
 combined_df <- combined_df %>% dplyr::select(Platform, Date, everything())
 
 ```
-#is there anything based on the local office
-
-# number of takedowns and number of approved takedowns
-```{r}
-
-names(combined_df)
-
-```
 
 
 
-```{r}
+
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 combined_df$Content.Restrictions <- coalesce(combined_df$Content.Restrictions, combined_df$Content.Restricted)
 
 
@@ -153,7 +141,7 @@ combined_df <- combined_df |> dplyr::select(-Content.Restricted)
 ```
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 combined_df <- combined_df %>% dplyr::select(Platform, Date,Country, Content.Restrictions, everything())
 names(combined_df)
 
@@ -164,30 +152,9 @@ names(combined_df)
 #series of chi square tests, one for each time period?
 
 ```
-```{r}
-# 
-# ggplot(combined_df, aes(x = factor(Country), y = Content.Restrictions, fill = factor(Date))) +
-#   geom_boxplot() +
-#   labs(x = "Country", y = "Integer Variable", fill = "Year") +
-#   theme_minimal()
-```
 
 
-
-```{r}
-# 
-# df_melt <- melt(combined_df, id.vars = c("Country", "Date"), value.name="Content.Restrictions")
-# help(melt)
-# df_melt
-# ggplot(combined_df, aes(x = factor(Date), y = factor(Country), fill = Content.Restrictions)) +
-#   geom_tile() +
-#   scale_fill_gradient(low = "white", high = "blue") +
-#   labs(x = "Date", y = "Country", fill = "Content.Restrictions") +
-#   theme_minimal() +
-#   theme(axis.text.y = element_text(size = 5))  # Adjust country labels for readability
-```
-
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #install.packages("vdemdata")
 
 #install.packages("devtools")
@@ -203,8 +170,8 @@ data("vdem")
 
  
 ```
-#fix dates, ensure that they line up
-```{r}
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 
 #install.packages("countrycode")
 
@@ -219,7 +186,7 @@ combined_df$year <- as.numeric(combined_df$year)
 vdem$year <- as.numeric(vdem$year)
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 
 # Merge the dataframes using `left_join` based on country and year
 #combined_df <- combined_df %>%
@@ -277,30 +244,30 @@ combined_df |> filter(!is.na(v2x_libdem)) -> combined_df
 
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #Load population, %population data
 pop_df <- read_csv("../data/API_IT.NET.USER.ZS_DS2_en_csv_v2_3409961.csv", col_names = TRUE, skip=4)
 #head(pop_df)
-#help(read_csv)
+##help(read_csv)
 
 pop_df <- pop_df |> dplyr::select(c(`Country Name`, `Country Code`) | starts_with('201') | starts_with('202')) |>
   dplyr::select(!c("2010", "2011", "2012"))
 #names(pop_df)
-#help(select)
+##help(select)
 ```
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #pivot longer to group cols 
 pop_df_fixed <- pop_df |> pivot_longer(cols = starts_with('20'), names_to = "year", values_to = "percent_pop_on_internet")
 #names(pop_df_fixed)
 
-#help(pivot_longer)
+##help(pivot_longer)
 unique(pop_df_fixed$`Country Code`)
 pop_df_fixed |> filter(str_detect(`Country Name`, regex("^S")))
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 pop_df_fixed$year <- as.numeric(pop_df_fixed$year)
 head(pop_df_fixed)
 # 
@@ -312,7 +279,7 @@ head(pop_df_fixed)
 
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 # Not sure if any of this needs to be ran, see next code chunk for solution
 # combined_df |> left_join(pop_df_fixed, by = c("country_code" = "Country Code", "year" = "year")) -> joined_combined_df
 # 
@@ -326,7 +293,7 @@ head(pop_df_fixed)
 #   select(c(Country,country_code, year, percent_pop_on_internet)) |>
 #   filter(country_code == "XKX")
 # 
-# help(group_by)
+# #help(group_by)
 # 
 # 
 # combined_df |> left_join(pop_df_fixed, by = c("country_code" = "Country Code", "year" = "year"))  |> filter(is.na(percent_pop_on_internet))|>
@@ -338,9 +305,9 @@ head(pop_df_fixed)
 ```
 
 
-#set NAs to country median, 
-```{r}
 
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+#set NAs to country median, 
 
 combined_df |> left_join(pop_df_fixed, by = c("country_code" = "Country Code", "year" = "year")) -> joined_combined_df
 
@@ -363,17 +330,17 @@ joined_combined_df |>
 
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #checking NAs, 0 is good
 combined_df |> filter(is.na(percent_pop_on_internet))
 sum(is.na(combined_df$percent_pop_on_internet))
 ```
 
 
-#Load population data
-```{r}
 
-#Pineapple
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+
+#Load population data
 
 flat_pop_df <- read_csv("../data/API_SP.POP.TOTL_DS2_en_csv_v2_3401680.csv", col_names = TRUE, skip=4)
 head(flat_pop_df)
@@ -389,22 +356,22 @@ names(flat_pop_df)
 
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #pivot longer to group cols 
 flat_pop_df_fixed <- flat_pop_df |> pivot_longer(cols = starts_with('20'), names_to = "year", values_to = "population")
 names(flat_pop_df_fixed)
 
-#help(pivot_longer)
+##help(pivot_longer)
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 flat_pop_df_fixed$year <- as.numeric(flat_pop_df_fixed$year)
 
 head(combined_df)
 #combined_df |> select(-c(`Country Code`, population)) -> combined_df
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 combined_df |> left_join(flat_pop_df_fixed, by = c("country_code" = "Country Code", "year" = "year")) -> combined_df
 
 combined_df
@@ -417,13 +384,15 @@ combined_df
 
 
 
-#rewriting to add in country offices
 
-```{r}
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+
+#rewriting to add in country offices
 office_df <- read_csv("../data/Local-Offices-1.csv", col_names = TRUE)
 head(office_df)
 
-help(rename)
+#help(rename)
 office_df <- office_df |> 
   dplyr::mutate("has_facebook_office" = `Facebook Office (1-0)`,
          "has_twitter_office" = `Twitter Office (1-0)`,
@@ -442,7 +411,7 @@ office_df |>
 
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 
 office_df
 
@@ -464,12 +433,11 @@ combined_df |> mutate(Country = Country.x) |> dplyr::select(-c(Country.y, Countr
 
 
 
+
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #load in country GDP data, should be similar to world bank data
 #"./API_NY.GDP.MKTP.CD_DS2_en_csv_v2_31795.csv"
-
-```{r}
-#mango
-
 gdp_df <- read_csv("../data/API_NY.GDP.MKTP.CD_DS2_en_csv_v2_31795.csv", col_names = TRUE, skip=4)
 head(gdp_df)
 
@@ -485,7 +453,7 @@ names(gdp_df)
 
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #pivot longer to group cols 
 gdp_df_fixed <- gdp_df |> pivot_longer(cols = starts_with('20'), names_to = "year", values_to = "GDP")
 names(gdp_df_fixed)
@@ -496,13 +464,13 @@ gdp_df_fixed$year <- as.numeric(gdp_df_fixed$year)
 
 
 
-#help(pivot_longer)
+##help(pivot_longer)
 ```
 
 
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #head(combined_df)
 
 
@@ -514,7 +482,7 @@ joined_combined_df$country_code <- as.factor(joined_combined_df$country_code)
 
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 joined_combined_df$year <- as.numeric(joined_combined_df$year)
 joined_combined_df
 head(combined_df)
@@ -528,10 +496,12 @@ joined_combined_df -> combined_df
 
 
 
+
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+
 #add in v2smgovsmmon, v2smgovfilcap, v2smarrest
 
-
-```{r}
 civic_df <- read_csv("../data/DSP_CY_v6.csv", col_names = TRUE)
 head(civic_df)
 
@@ -545,7 +515,7 @@ names(civic_df)
 
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 civic_df$year <- as.numeric(civic_df$year)
 
 combined_df |> left_join(civic_df, by = c("country_code" = "country_text_id", "year" = "year")) -> combined_df
@@ -553,9 +523,11 @@ combined_df |> left_join(civic_df, by = c("country_code" = "country_text_id", "y
 
 head(combined_df)
 ```
-#load in political regime type
 
-```{r}
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+
+#load in political regime type
 regime_df <- read_csv("../data/political-regime.csv", col_names = TRUE)
 
 #regime_df
@@ -608,8 +580,10 @@ combined_df
 
 
 
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+
 #Use later for assessing associations between variables
-```{r}
 combined_df |> dplyr::select(-c(`Country Name`, country_name.y )) -> combined_df
 
 
@@ -620,18 +594,20 @@ combined_df |> dplyr::select(-c(`Country Name`, country_name.y )) -> combined_df
 #ggpairs(sat, columns = 2:8)
 ```
 
+
+
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+#must update path to match when swapping pcs
+
 #add total content restrictions by country
-
-
-
-```{r}
-file_list <- list.files(path = "~/joe_sturla_r/2024_takedown_analysis/data/", pattern ="Content_Restrictions_20?", full.names = TRUE) 
+file_list <- list.files(path = "~/governemnt_takedown/data", pattern ="Content_Restrictions_20?", full.names = TRUE) 
 data_list <- list()
 
 file_list
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 data_list <- list()
 for (file in file_list) {
   # Read the current CSV file into a dataframe
@@ -697,18 +673,26 @@ for (file in file_list) {
 ```
 
 
-```{r}
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 
 content_restrictions_df <- bind_rows(data_list)
 head(content_restrictions_df)
 unique(content_restrictions_df$count)
+sum(!is.na(content_restrictions_df$total))
+sum(is.na(content_restrictions_df$count))
+
+length(content_restrictions_df$total)
+length(content_restrictions_df$count)
+
 ```
 
+
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 # fix NAs from coercion above by combining totals and count columns, 
-
-```{r}
-
 coalesce(content_restrictions_df$count, content_restrictions_df$total) -> content_restrictions_df$total
+content_restrictions_df
+
 content_restrictions_df |> dplyr::select(-count) |> dplyr::select(Country, total, Date, everything()) 
 
 #convert to date
@@ -717,33 +701,63 @@ content_restrictions_df$Date <- mdy(content_restrictions_df$Date)
 content_restrictions_df$year <- year(content_restrictions_df$Date)
 ```
 
+
+
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+
 # then removing subcategory columns, then coalescing by date + add year column.\
-
-
-```{r}
 head(content_restrictions_df)
 content_restrictions_df |> dplyr::select(-c(ISO.Code, starts_with("Facebook"), starts_with("Instagram"))) -> content_restrictions_df
 
+
+content_restrictions_df
 ```
 
+
+
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #add ISO country codes to countries for join, remove count column
-
-
-```{r}
-
 content_restrictions_df$country_code <- countrycode(content_restrictions_df$Country, "country.name", "iso3c")
 head(content_restrictions_df)
 
-content_restrictions_df |> dplyr::select(-count) -> content_restrictions_df
+content_restrictions_df |> dplyr::select(c(-count, -Country)) -> content_restrictions_df
+content_restrictions_df |> dplyr::mutate("total_content_takedowns" = total) |> dplyr::select(c(-total)) -> content_restrictions_df
+
 names(content_restrictions_df)
 unique(content_restrictions_df$Date)
 unique(combined_df$Date)
 ```
 
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+
 #TODO combine content_restrictions_df and main df
-```{r}
 names(combined_df)
-combined_df |> left_join(content_restrictions_df, by=c('country_code' = 'country_code', 'Date' = 'Date'))
+combined_df |> left_join(content_restrictions_df, by=c('country_code' = 'country_code', 'Date' = 'Date','year' = 'year')) -> test_df
+content_restrictions_df
+
+test_df
+
+names(test_df)
+sum(!is.na(test_df$total_content_takedowns))
+sum(!is.na(content_restrictions_df$total_content_takedowns))
+sum(!is.na(content_restrictions_df$total_content_takedowns))-sum(!is.na(test_df$total_content_takedowns))
+
+sum(is.na(test_df$total_content_takedowns)) 
+
+
+test_df |> filter(is.na(total_content_takedowns))|> dplyr::select(Country, country_code, Date, total_content_takedowns, everything()) -> problems_df
+
+problems_df |> arrange(Date, year, country_code)
+content_restrictions_df |> arrange(Date, year,country_code)
+unique(problems_df) 
+
+#TODO test_df is joined, contains all of combined df and the total number of content takedowns
+#for analysis on content takedowns, drop rows where total_content_takedowns = na and run on that df separately
+#should be about 2k rows left
+
 
 ```
 
@@ -751,34 +765,57 @@ combined_df |> left_join(content_restrictions_df, by=c('country_code' = 'country
 
 
 
+
+
+
+
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 
 #begin models
 #start with just libdem and total requests
 
 #only use date for models, NOT year, year has multiple entries for the same year and country due to split
-
-
-
-```{r}
 names(combined_df)
 #Should contain Country, country_code, year, platform, Date, libdem, social media gov metrics, population, percent pop on internet, regime type, existence of a facebook office, GDP
 
 model_df <- combined_df
+
+
 #names(model_df)
 
 model_df$country_code <- as.factor(model_df$country_code)
+
+model_df$Date <- as.Date(model_df$Date)
+model_df$date_numeric <- as.numeric(model_df$Date)
 model_df$year <- as.numeric(model_df$year)
   
-model <- lm(Total.Requests ~ v2x_libdem + year, data = model_df)
+model <- lm(Total.Requests ~ v2x_libdem + date_numeric, data = model_df)
+date_model <- lm(Total.Requests ~ v2x_libdem + Date, data = model_df)
 summary(model)
+summary(date_model)
+#sum(is.na(model_df$Total.Requests.Percentage))
 
-sum(is.na(model_df$Total.Requests.Percentage))
+```
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+restrictions_model_df <- test_df
+
+
+
+restrictions_model_df$country_code <- as.factor(restrictions_model_df$country_code)
+restrictions_model_df$year <- as.numeric(restrictions_model_df$year)
+  
+restrictions_model <- lm(Total.Requests ~ v2x_libdem + year, data = model_df)
+summary(restrictions_model)
 
 ```
 
 
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #removing NAs/ irrelevant columns
-```{r}
+
 sapply(model_df, function(x) sum(is.na(x)))
 model_df |> dplyr::select(c(-starts_with('Court'), -starts_with('Legal'), -starts_with('Emergency'), -starts_with('Subpoena'), -starts_with('Pen'), -starts_with('Title'), -starts_with('Search'), -starts_with('ER'), -starts_with('Preservation'))) -> model_df_cut_cols
 
@@ -793,20 +830,69 @@ model_df_cut_cols |> filter(is.na(v2x_libdem))
 ```
 
 
-#fixes column names, TODO is to remove values that have NAs so that stepwise AIC will run properly
-```{r}
 
-#names(model_df)
-model_df_cut_cols |> mutate(political_regime = `Political regime`) -> model_df_cut_cols
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+sapply(restrictions_model_df, function(x) sum(is.na(x)))
+restrictions_model_df |> dplyr::select(c(-starts_with('Court'), -starts_with('Legal'), -starts_with('Emergency'), -starts_with('Subpoena'), -starts_with('Pen'), -starts_with('Title'), -starts_with('Search'), -starts_with('ER'), -starts_with('Preservation'))) -> restrictions_model_df_cut_cols
+
+model_df_cut_cols
+#model_df_cut_cols |> filter(!is.na(Total.Requests.Percentage)) ->model_df_cut_cols
+sapply(model_df_cut_cols, function(x) sum(is.na(x)))
 
 
 
 ```
 
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+#fixes column names,
+#names(model_df)
+names(restrictions_model_df_cut_cols)
+model_df_cut_cols |> mutate(political_regime = `Political regime`) -> model_df_cut_cols
+
+restrictions_model_df_cut_cols |> mutate(political_regime = `Political regime`) -> restrictions_model_df_cut_cols
+
+
+
+#Remove NA GDP and political regime values only
+model_df_cut_cols |> filter(!is.na(GDP)) |> filter(!is.na(political_regime))-> model_df_cut_cols
+
+restrictions_model_df_cut_cols |> filter(!is.na(GDP))|> filter(!is.na(political_regime))-> restrictions_model_df_cut_cols
+
+
+names(restrictions_model_df_cut_cols)
+```
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+#include log versions of population and GDP, as well as pop*percentpop on internet
+min(model_df_cut_cols$percent_pop_on_internet)
+
+model_df_cut_cols |> mutate(log_pop = log(population), log_gdp = log(GDP), pop_on_internet = population*percent_pop_on_internet*.01, log_pop_on_internet = log(pop_on_internet)) -> model_df_cut_cols
+
+
+```
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+#same as above but for restrictions_model df
+restrictions_model_df_cut_cols |> mutate(log_pop = log(population), log_gdp = log(GDP), pop_on_internet = population*percent_pop_on_internet*.01, log_pop_on_internet = log(pop_on_internet)) -> restrictions_model_df_cut_cols
+names(restrictions_model_df_cut_cols)
+```
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
+restrictions_model_df_cut_cols$political_regime_factor <- as.factor(restrictions_model_df_cut_cols$political_regime) 
+model_df_cut_cols$political_regime_factor <- as.factor(model_df_cut_cols$political_regime) 
+
+```
+
+
+
+
+
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #trains model on all relevant variables included
 
 #NOTE: 
-```{r}
+
 #
 #ols
 #logit
@@ -814,131 +900,169 @@ model_df_cut_cols |> mutate(political_regime = `Political regime`) -> model_df_c
 
 
 #Total requests number
-total_requests_all_vars <- lm(Total.Requests ~ v2x_libdem + has_facebook_office +GDP + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + year + population + percent_pop_on_internet, data = model_df_cut_cols)
+total_requests_all_vars <- lm(Total.Requests ~ v2x_libdem + has_facebook_office +GDP + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + population + percent_pop_on_internet, data = model_df_cut_cols)
 summary(total_requests_all_vars)
-```
+
+#include logged population and gdp
+total_requests_logged_vars <- lm(Total.Requests ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop + percent_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_logged_vars)
 
 
 
-```{r}
+#remove population/pop percent on internet for logged internet population
 
+total_requests_logged_pop_internet <- lm(Total.Requests ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_logged_pop_internet)
 
-stepwise_model <- stepAIC(total_requests_all_vars, direction = "both")
-
-```
-
-
-
-
-```{r}
-#Total requests percentage as a function of libdem, year, population
-#total requests percentage IS impacted by libdem score
-model_requests_percent <- lm(Total.Requests.Percentage ~ v2x_libdem + year, data = model_df)
-summary(model_requests_percent)
-
-
-
-model_requests_percent_pop <- lm(Total.Requests.Percentage ~ v2x_libdem + year + population, data = model_df)
-summary(model_requests_percent_pop)
-```
-
-
-```{r}
-model_offices <- lm(Total.Requests ~ v2x_libdem + has_facebook_office + year + population, data = model_df)
-summary(model_offices)
-
-model_offices_percent <- lm(Total.Requests.Percentage ~ has_facebook_office + year, data = model_df)
-summary(model_offices_percent)
-
-model_offices_base <- lm(Total.Requests ~ has_facebook_office + year , data = model_df)
-summary(model_offices_base)
-```
-
-#filter df used to only include countries that have below a .85 vdem score
-```{r}
-#names(model_df)
-
-model_df <- model_df |> 
-  mutate("political_regime" = `Political regime`) |>
-  select(-`Political regime`)
-model_df$political_regime <- as.factor(model_df$political_regime)
-
-typeof(model_df$political_regime)
-type(model_df$political_regime)
-
-
-no_dem_data <- model_df |>
-  filter(v2x_libdem <.85)
 
 ```
 
+```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 
-rerun models on new df
-```{r}
-model_offices_nodem <- glm(Total.Requests ~ v2x_libdem + has_facebook_office + year + population, data = no_dem_data)
-summary(model_offices_nodem)
+#  Multicollinearity testing
 
-model_offices_percent_nodem <- glm(Total.Requests ~ has_facebook_office + year, data = no_dem_data)
-summary(model_offices_percent_nodem)
+# VIF scores of 5-10 or higher indicate high multicollinearity, 
+# cor function allows you to see correlation between individual variables. closer to 1 or to -1 indicate high correlation
 
-model_offices_base_nodem <- glm(Total.Requests ~ has_facebook_office + year , data = no_dem_data)
-summary(model_offices_base_nodem)
-```
-```{r}
-model_offices_nodem <- glm(Total.Requests.Percentage ~ v2x_libdem + has_facebook_office + year + population, data = no_dem_data)
-summary(model_offices_nodem)
-
-model_offices_percent_nodem <- glm(Total.Requests.Percentage ~ has_facebook_office + year, data = no_dem_data)
-summary(model_offices_percent_nodem)
-
-model_offices_base_nodem <- glm(Total.Requests.Percentage ~ has_facebook_office + year , data = no_dem_data)
-summary(model_offices_base_nodem)
-```
-
-```{r}
-v2smgovfilcap_nodem <- glm(Total.Requests.Percentage ~ v2smgovfilcap + has_facebook_office + year + population, data = no_dem_data)
-summary(v2smgovfilcap_nodem)
-
-
-v2smgovsmmon_nodem <- glm(Total.Requests.Percentage ~ v2smgovsmmon + has_facebook_office + year + population, data = no_dem_data)
-summary(v2smgovsmmon_nodem)
-
-v2smarrest_nodem <- glm(Total.Requests.Percentage ~ v2smarrest + has_facebook_office + year + population, data = no_dem_data)
-summary(v2smarrest_nodem)
-
-all_nodem <- glm(Total.Requests.Percentage ~ v2smarrest + v2smgovsmmon + v2smgovfilcap + has_facebook_office + year + population, data = no_dem_data)
-summary(all_nodem)
-
-
-(max(no_dem_data$v2smgovfilcap))
-(min(no_dem_data$v2smgovfilcap))
-no_dem_data |> filter(v2smgovfilcap > 2) |> select(Country, v2smgovfilcap)
-```
+# vdem scores show high multicollinearity, should run separate models for each of the 
 
 
 
-#removing NAs/ irrelevant columns
-```{r}
 sapply(model_df_cut_cols, function(x) sum(is.na(x)))
-model_df |> select(c(-starts_with('Court'), -starts_with('Legal'), -starts_with('Emergency'), -starts_with('Subpoena'), -starts_with('Pen'), -starts_with('Title'), -starts_with('Search'))) -> model_df_cut_cols
+#5-10 or higher = multicollinearity issues
+vif(total_requests_all_vars)
+vif(total_requests_logged_vars)
 
 
-model_df_cut_cols |> filter(!is.na(Total.Requests.Percentage)) ->model_df_cut_cols
-sapply(model_df_cut_cols, function(x) sum(is.na(x)))
+numeric_vars <- model_df_cut_cols[, c("v2x_libdem", "v2smgovsmmon", "v2smarrest", "political_regime","GDP", "population", "v2smgovfilcap")]
+cor(numeric_vars)
+
+ols_eigen_cindex(total_requests_all_vars)
+```
+# results start here, modeling starts here
+
+```{r}
+#EVERYTHING model
+total_requests_logged_pop_internet <- lm(Total.Requests ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_logged_pop_internet)
+```
+# EVERYTHING model with political regime as factor
+```{r}
 
 
-
-model_df_cut_cols |> filter(is.na(v2x_libdem))
+total_requests_logged_pop_internet_factor <- lm(Total.Requests ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime_factor + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_logged_pop_internet_factor)
 
 ```
+
+```{r}
+
+total_requests_logged_pop_internet_libdem <- lm(Total.Requests ~ v2x_libdem + has_facebook_office + log_gdp + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_logged_pop_internet_libdem)
+
+total_requests_logged_pop_internet_smgosvsmmon <- lm(Total.Requests ~  has_facebook_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_logged_pop_internet_smgosvsmmon)
+
+total_requests_logged_pop_internet_smarrest <- lm(Total.Requests ~ has_facebook_office + log_gdp + v2smarrest + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_logged_pop_internet_smarrest)
+
+total_requests_logged_pop_internet_political_regime <- lm(Total.Requests ~ has_facebook_office + log_gdp + political_regime + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_logged_pop_internet_political_regime)
+
+total_requests_logged_pop_internet_political_regime_factor <- lm(Total.Requests ~ has_facebook_office + log_gdp + political_regime_factor + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_logged_pop_internet_political_regime)
+
+
+```
+
+#Percentage Requests Start Here
+```{r}
+#original model, percent_requests
+total_requests_percent_logged_pop_internet <- lm(Total.Requests.Percentage ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_percent_logged_pop_internet)
+
+
+total_requests_percent_logged_pop_internet_factor <- lm(Total.Requests.Percentage ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime_factor + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_percent_logged_pop_internet_factor)
+
+
+total_requests_percent_logged_pop_internet_libdem <- lm(Total.Requests.Percentage ~ v2x_libdem + has_facebook_office + log_gdp + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_percent_logged_pop_internet_libdem)
+
+total_requests_percent_logged_pop_internet_smgosvsmmon <- lm(Total.Requests.Percentage ~  has_facebook_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_percent_logged_pop_internet_smgosvsmmon)
+
+total_requests_percent_logged_pop_internet_smarrest <- lm(Total.Requests.Percentage ~ has_facebook_office + log_gdp + v2smarrest + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_percent_logged_pop_internet_smarrest)
+
+total_requests_percent_logged_pop_internet_political_regime <- lm(Total.Requests.Percentage ~ has_facebook_office + log_gdp + political_regime + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_percent_logged_pop_internet_political_regime)
+
+
+total_requests_percent_logged_pop_internet_political_regime_factor <- lm(Total.Requests.Percentage ~ has_facebook_office + log_gdp + political_regime_factor + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_percent_logged_pop_internet_political_regime_factor)
+
+
+#Base Model
+
+
+total_requests_percent_logged_pop_internet_base <- lm(Total.Requests.Percentage ~ log_gdp + Date + log_pop_on_internet, data = model_df_cut_cols)
+summary(total_requests_percent_logged_pop_internet_base)
+
+```
+
+
+
+
+
+#total content takedowns start here
+```{r}
+
+#original model, total content takedowns
+content_takedowns_logged_pop_internet <- lm(total_content_takedowns ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet, data = restrictions_model_df_cut_cols)
+summary(content_takedowns_logged_pop_internet)
+
+
+content_takedowns_logged_pop_internet_factor <- lm(total_content_takedowns ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime_factor + Date + log_pop_on_internet, data = restrictions_model_df_cut_cols)
+summary(content_takedowns_logged_pop_internet_factor)
+
+
+content_takedowns_logged_pop_internet_libdem <- lm(total_content_takedowns ~ v2x_libdem + has_facebook_office + log_gdp + Date + log_pop_on_internet, data = restrictions_model_df_cut_cols)
+summary(content_takedowns_logged_pop_internet_libdem)
+
+content_takedowns_logged_pop_internet_smgosvsmmon <- lm(total_content_takedowns ~  has_facebook_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet, data = restrictions_model_df_cut_cols)
+summary(content_takedowns_logged_pop_internet_smgosvsmmon)
+
+content_takedowns_logged_pop_internet_smarrest <- lm(total_content_takedowns ~ has_facebook_office + log_gdp + v2smarrest + Date + log_pop_on_internet, data = restrictions_model_df_cut_cols)
+summary(content_takedowns_logged_pop_internet_smarrest)
+
+content_takedowns_logged_pop_internet_political_regime <- lm(total_content_takedowns ~ has_facebook_office + log_gdp + political_regime_factor + Date + log_pop_on_internet, data = restrictions_model_df_cut_cols)
+summary(content_takedowns_logged_pop_internet_political_regime)
+
+
+#Base Model
+
+
+content_takedowns_logged_pop_internet_base <- lm(total_content_takedowns ~ log_gdp + Date + log_pop_on_internet, data = restrictions_model_df_cut_cols)
+summary(content_takedowns_logged_pop_internet_base)
+```
+#end results/modeling 1
+#put in google/twitter data
 
 
 ```{r}
 
 
-all_relevant_vars <- lm(Total.Requests.Percentage ~ v2x_libdem + political_regime + v2smarrest + v2smgovsmmon + v2smgovfilcap + has_facebook_office + year + population + percent_pop_on_internet + GDP, data = model_df)
-summary(all_regime)
+
+
+
+twitter_df <- read_csv("../data/Twitter_Transparency-Removal_Requests_Jul-Dec-2020.csv", col_names = TRUE, skip = 1)
+google_df <- read_csv("../data/google-government-removal-requests.csv", col_names = TRUE)
+
+#help("problems")
+problems(twitter_df)
 ```
 
+```
 
 
