@@ -22,6 +22,8 @@ library(broom)
 
 library(MASS)
 
+library(lfe)
+
 ```
 
 ```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
@@ -1047,7 +1049,79 @@ content_takedowns_logged_pop_internet_base <- lm(total_content_takedowns ~ log_g
 summary(content_takedowns_logged_pop_internet_base)
 ```
 #end results/modeling 1
+
+
+```{r}
+
+
+
+fe2 <- felm(
+  bond_GDP_local ~ real_r + equity_volatility | country_code,
+  data = panel_eme_filtered
+  )
+summary(fe2, robust = T) # heteroskedastic robust SE's
+names(model_df_cut_cols)
+
+#has_facebook office breaks felm
+#Date and country_code level effects
+
+felm_total_requests_percentage_v2x_libdem <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2x_libdem | Date + country_code, data = model_df_cut_cols)
+summary(felm_total_requests_percentage_v2x_libdem)
+
+
+felm_total_requests_percentage_v2smgovsmmon <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2smgovsmmon | Date + country_code, data = model_df_cut_cols)
+summary(felm_total_requests_percentage_v2smgovsmmon)
+
+
+felm_total_requests_percentage_v2smgovfilcap <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2smgovfilcap | Date + country_code, data = model_df_cut_cols)
+summary(felm_total_requests_percentage_v2smgovfilcap)
+
+felm_total_requests_percentage_v2smarrest <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2smarrest | Date + country_code, data = model_df_cut_cols)
+summary(felm_total_requests_percentage_v2smarrest)
+
+
+
+
+#country effects only
+
+
+felm_total_requests_percentage_country_effects_v2x_libdem <- felm(Total.Requests.Percentage ~   v2x_libdem + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = model_df_cut_cols)
+summary(felm_total_requests_percentage_country_effects_v2x_libdem)
+
+
+felm_total_requests_percentage_country_effects_v2smgovsmmon <- felm(Total.Requests.Percentage ~   v2smgovsmmon + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = model_df_cut_cols)
+summary(felm_total_requests_percentage_country_effects_v2smgovsmmon)
+
+felm_total_requests_percentage_country_effects_v2smgovfilcap <- felm(Total.Requests.Percentage ~   v2smgovfilcap + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = model_df_cut_cols)
+summary(felm_total_requests_percentage_country_effects_v2smgovfilcap)
+
+felm_total_requests_percentage_country_effects_v2smarrest <- felm(Total.Requests.Percentage ~   v2smarrest + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = model_df_cut_cols)
+summary(felm_total_requests_percentage_country_effects_v2smarrest)
+
+
+
+# extra variables to test
+#v2x_libdem +v2smgovsmmon+v2smgovfilcap+ v2smarrest
+```
+
+
+```{r}
+
+library(car)
+
+alias(lm(Total.Requests.Percentage ~ has_facebook_office + log_gdp + political_regime + log_pop_on_internet + Date + country_code, data = model_df_cut_cols))
+vif(lm(Total.Requests.Percentage ~ has_facebook_office + log_gdp + political_regime + log_pop_on_internet + Date + country_code, data = model_df_cut_cols))
+```
+
+
+
+
 #put in google/twitter data
+
+
+
+
+
 
 
 ```{r}
@@ -1061,8 +1135,89 @@ google_df <- read_csv("../data/google-government-removal-requests.csv", col_name
 
 #help("problems")
 problems(twitter_df)
+
+head(twitter_df)
+
+head(google_df)
 ```
 
+
+
+```{r}
+#google steps:
+
+#Change country/region name to country
+#Change "Items Requests To Be Removed" to Total.Requests
+#change number of requests to requests_approved
+#Remove unnecessaty columns (everything but Period Ending, Country/Region, Number of Requests, Items Requested To Be Removed)
+google_df |> dplyr::mutate(Country = `Country/Region`, Date = `Period Ending`, Requests_Approved = `Number of Requests`, 
+                           Total.Requests = `Items Requested To Be Removed`) |> 
+  dplyr::select(c(`Date`, `Country`, `Requests_Approved`, `Total.Requests`)) -> google_df
+
+
 ```
+
+
+```{r}
+#add in country codes first since text is jank, swap to country codes only
+google_df$country_code <- countrycode(google_df$Country, "country.name", "iso3c")
+
+google_df
+
+
+```
+
+
+
+```{r}
+#condense columns of same country and region
+unique(google_df$Country)
+
+google_df |>
+  dplyr::select(-Country)|>
+  dplyr::group_by(country_code, Date) |>
+  summarise(across(everything(), sum, na.rm = TRUE), .groups = 'drop') -> google_df
+
+# View the combined dataframe
+
+
+```
+
+
+
+```{r}
+#calculate total.requests.percentage as requests approved / total requests
+head(combined_df)
+help("round")
+names(google_df)
+google_df |> mutate(Google.Total.Requests.Percentage = round((Requests_Approved/Total.Requests)*100L )) -> google_df
+```
+
+
+```{r}
+#Add country_codes for join to main df.
+names(model_df_cut_cols)
+model_df_cut_cols
+
+google_df$year <- year(ymd(google_df$Date))
+head(google_df)
+```
+
+#join with gpd_df_fixed, flat_pop_fixed, pop_df_fixed, vdem, office_df, civic_df(has smarrest, etc)
+```{r}
+#gpd_df_fixed only contains Country Code, year, GDP
+#flat_pop_fixed contains Country Code, year, population
+#pop_df_fixed contains Country Code, year, percent_pop_on_internet,
+pop_df_fixed |> dplyr::select(-`Country Name`) -> pop_df_fixed
+head(vdem)
+
+
+```
+
+
+
+
+
+
 
 
