@@ -1,9 +1,7 @@
 ---
-title: "government_takedown_analysis"
-output:
-  html_document: default
-  pdf_document: default
-date: "2024-09-13"
+title: "misinfo_law_analysis"
+output: pdf_document
+date: "2025-03-10"
 ---
 
 
@@ -51,11 +49,11 @@ for (file in file_list) {
   # Extract the year and half information from the file name
   # Assuming the format is like "PRPL-Facebook-Government-Report-YYYY_HX"
   # Where YYYY is the year and HX is the half of the year (H1 or H2)
-  year_half <- gsub(".*-(\\\\d{4})_(H[12]).csv$", "\\\\1_\\\\2", file_name)
+  year_half <- gsub(".*-(\\d{4})_(H[12]).csv$", "\\1_\\2", file_name)
   
   # Split the extracted information into year and half
   year <- sub("_(H[12])$", "", year_half)
-  half <- sub("^\\\\d{4}_(H[12])$", "\\\\1", year_half)
+  half <- sub("^\\d{4}_(H[12])$", "\\1", year_half)
   
   # Determine the date based on the half of the year
   if (half == "H1") {
@@ -107,11 +105,11 @@ for (file in file_list) {
 
 initial_df <- bind_rows(data_list)
 combined_df <- initial_df
-#head(combined_df)
-#head(data_list[[3]])
-#sum(is.na(initial_df$Total.Requests.Percentage))
+head(combined_df)
+head(data_list[[3]])
+sum(is.na(initial_df$Total.Requests.Percentage))
 
-#names(initial_df)
+names(initial_df)
 ```
 
 ```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
@@ -120,7 +118,7 @@ combined_df <- initial_df
 
 
 combined_df <- combined_df |> dplyr::select(where(~ any(!is.na(.))))
-combined_df |> dplyr::filter(!is.na(Total.Requests.Percentage)) -> combined_df
+combined_df |> filter(!is.na(Total.Requests.Percentage)) -> combined_df
 combined_df$Platform <- "Facebook"
 #add platform column, 
 combined_df$Platform <- "Facebook"
@@ -214,6 +212,8 @@ vdem |> filter(str_detect(country_name, regex("^Cz")))
 
 
 combined_df$country_code <- countrycode(combined_df$Country, "country.name", "iso3c")
+
+
 # combined_df 
 # names(vdem)
 # vdem |> select(c(country_name, v2x_libdem)) |>
@@ -228,24 +228,54 @@ combined_df |>
     Country == "Kosovo" ~ "XKX",
     Country == "Somaliland" ~ "SML",
     TRUE ~ country_code
-  )) |> left_join(vdem |> dplyr::select(country_name, country_text_id, year, v2x_libdem), 
-            by = c("country_code" = "country_text_id", "year" = "year")) |>
+  )) |> #left_join(vdem |> dplyr::select(country_name, country_text_id, year, v2x_libdem), 
+#            by = c("country_code" = "country_text_id", "year" = "year")) |>
   dplyr::select(Country, country_name, country_code, year, everything()) -> combined_df
 
 #combined_df
-combined_df |> filter(is.na(v2x_libdem)) -> trouble_names_df
+#combined_df |> filter(is.na(v2x_libdem)) -> trouble_names_df
 
-unique(trouble_names_df$Country) -> dropped_countries
+#unique(trouble_names_df$Country) -> dropped_countries
 
 
 
 #edit the working df to not include countries without a v2x_libdem score 
 
-combined_df |> filter(!is.na(v2x_libdem)) -> combined_df
+#combined_df |> filter(!is.na(v2x_libdem)) -> combined_df
 
 
 ```
 
+#import misinfo data, add country codes
+
+```{r}
+#examples
+getwd()
+misinfo_df <- read_excel("../data/Misinformation_Law_Dataset.xlsx", sheet = "Laws by Country and Year", na = c("", "NA", ".."))
+
+
+misinfo_df$country_code <- countrycode(misinfo_df$Country, "country.name", "iso3c")
+
+
+
+```
+
+```{r}
+
+misinfo_df |> dplyr::mutate("has_law" = Law...2) |>
+  mutate(year_enacted = `Year enacted`) |>
+  dplyr::select(country_code, has_law, Repealed, year_enacted)|>
+  # Group by country code
+  group_by(country_code) %>%
+  # Arrange by Year enacted within each group (NA values last)
+  arrange(country_code, year_enacted) %>%
+  # Take the first row of each group (which will be the lowest non-NA year)
+  # If all values are NA, it will just take the first row
+  slice(1) %>%
+  # Remove the grouping
+  ungroup() -> misinfo_laws_df
+
+```
 
 
 ```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
@@ -624,11 +654,11 @@ for (file in file_list) {
   # Extract the year and half information from the file name
   # Assuming the format is like "PRPL-Facebook-Government-Report-YYYY_HX"
   # Where YYYY is the year and HX is the half of the year (H1 or H2)
-  year_half <- gsub(".*_(\\\\d{4})_(H[12]).csv$", "\\\\1_\\\\2", file_name)
+  year_half <- gsub(".*_(\\d{4})_(H[12]).csv$", "\\1_\\2", file_name)
   
   # Split the extracted information into year and half
   year <- sub("_(H[12])$", "", year_half)
-  half <- sub("^\\\\d{4}_(H[12])$", "\\\\1", year_half)
+  half <- sub("^\\d{4}_(H[12])$", "\\1", year_half)
   
   # Determine the date based on the half of the year
   if (half == "H1") {
@@ -710,7 +740,7 @@ content_restrictions_df$year <- year(content_restrictions_df$Date)
 
 ```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 
-# then removing subcategory columns, then coalescing by date + add year column.\\
+# then removing subcategory columns, then coalescing by date + add year column.\
 head(content_restrictions_df)
 content_restrictions_df |> dplyr::select(-c(ISO.Code, starts_with("Facebook"), starts_with("Instagram"))) -> content_restrictions_df
 
@@ -1573,233 +1603,6 @@ twitter_df_fixed$political_regime_factor <- as.factor(twitter_df_fixed$political
 
 
 
-
-
-#google lms
-```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
-# Begin google modeling
-## google total requests linear models
-google_total_requests_logged_pop_internet_libdem <- lm(Total.Requests ~ v2x_libdem + has_google_office + log_gdp + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_logged_pop_internet_libdem)
-
-google_total_requests_logged_pop_internet_smgosvsmmon <- lm(Total.Requests ~  has_google_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_logged_pop_internet_smgosvsmmon)
-
-google_total_requests_logged_pop_internet_smarrest <- lm(Total.Requests ~ has_google_office + log_gdp + v2smarrest + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_logged_pop_internet_smarrest)
-
-google_total_requests_logged_pop_internet_political_regime <- lm(Total.Requests ~ has_google_office + log_gdp + political_regime + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_logged_pop_internet_political_regime)
-
-google_total_requests_logged_pop_internet_political_regime_factor <- lm(Total.Requests ~ has_google_office + log_gdp + political_regime_factor + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_logged_pop_internet_political_regime_factor)
-
-
-google_total_requests_logged_pop_internet_base <- lm(Total.Requests ~ has_google_office + log_gdp  + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_logged_pop_internet_base)
-
-
-```
-#google lms
-```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
-#Google percentage requests models
-google_df_fixed
-#original model, percent_requests
-google_total_requests_percent_logged_pop_internet <- lm(Google.Total.Requests.Percentage
- ~ v2x_libdem + has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_percent_logged_pop_internet)
-
-
-google_total_requests_percent_logged_pop_internet_factor <- lm(Google.Total.Requests.Percentage
- ~ v2x_libdem + has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime_factor + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_percent_logged_pop_internet_factor)
-
-
-google_total_requests_percent_logged_pop_internet_libdem <- lm(Google.Total.Requests.Percentage
- ~ v2x_libdem + has_google_office + log_gdp + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_percent_logged_pop_internet_libdem)
-
-google_total_requests_percent_logged_pop_internet_smgosvsmmon <- lm(Google.Total.Requests.Percentage
- ~  has_google_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_percent_logged_pop_internet_smgosvsmmon)
-
-google_total_requests_percent_logged_pop_internet_smarrest <- lm(Google.Total.Requests.Percentage
- ~ has_google_office + log_gdp + v2smarrest + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_percent_logged_pop_internet_smarrest)
-
-google_total_requests_percent_logged_pop_internet_political_regime <- lm(Google.Total.Requests.Percentage
- ~ has_google_office + log_gdp + political_regime + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_percent_logged_pop_internet_political_regime)
-
-
-google_total_requests_percent_logged_pop_internet_political_regime_factor <- lm(Google.Total.Requests.Percentage
- ~ has_google_office + log_gdp + political_regime_factor + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_percent_logged_pop_internet_political_regime_factor)
-
-
-#Base Model
-
-
-google_total_requests_percent_logged_pop_internet_base <- lm(Google.Total.Requests.Percentage
- ~ log_gdp + Date + log_pop_on_internet, data = google_df_fixed)
-summary(google_total_requests_percent_logged_pop_internet_base)
-
-```
-#google felms
-```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
-#Begin google felm modeling
-
-names(google_df_fixed)
-google_felm_total_requests_percentage_v2x_libdem <- felm(Google.Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2x_libdem | Date + country_code, data = google_df_fixed)
-summary(google_felm_total_requests_percentage_v2x_libdem)
-
-
-google_felm_total_requests_percentage_v2smgovsmmon <- felm(Google.Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2smgovsmmon | Date + country_code, data = google_df_fixed)
-summary(google_felm_total_requests_percentage_v2smgovsmmon)
-
-
-google_felm_total_requests_percentage_v2smgovfilcap <- felm(Google.Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2smgovfilcap | Date + country_code, data = google_df_fixed)
-summary(google_felm_total_requests_percentage_v2smgovfilcap)
-
-google_felm_total_requests_percentage_v2smarrest <- felm(Google.Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2smarrest | Date + country_code, data = google_df_fixed)
-summary(google_felm_total_requests_percentage_v2smarrest)
-
-
-
-
-#country effects only
-
-
-google_felm_total_requests_percentage_country_effects_v2x_libdem <- felm(Google.Total.Requests.Percentage ~   v2x_libdem + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = google_df_fixed)
-summary(google_felm_total_requests_percentage_country_effects_v2x_libdem)
-
-
-google_felm_total_requests_percentage_country_effects_v2smgovsmmon <- felm(Google.Total.Requests.Percentage ~   v2smgovsmmon + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = google_df_fixed)
-summary(google_felm_total_requests_percentage_country_effects_v2smgovsmmon)
-
-google_felm_total_requests_percentage_country_effects_v2smgovfilcap <- felm(Google.Total.Requests.Percentage ~   v2smgovfilcap + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = google_df_fixed)
-summary(google_felm_total_requests_percentage_country_effects_v2smgovfilcap)
-
-google_felm_total_requests_percentage_country_effects_v2smarrest <- felm(Google.Total.Requests.Percentage ~   v2smarrest + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = google_df_fixed)
-summary(google_felm_total_requests_percentage_country_effects_v2smarrest)
-#End google modeling
-```
-
-
-
-
-
-#twitterlms
-```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
-#start twitter modeling
-twitter_total_requests_logged_pop_internet_libdem <- lm(Total.requests ~ v2x_libdem + has_twitter_office + log_gdp + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_logged_pop_internet_libdem)
-
-twitter_total_requests_logged_pop_internet_smgosvsmmon <- lm(Total.requests ~  has_twitter_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_logged_pop_internet_smgosvsmmon)
-
-twitter_total_requests_logged_pop_internet_smarrest <- lm(Total.requests ~ has_twitter_office + log_gdp + v2smarrest + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_logged_pop_internet_smarrest)
-
-twitter_total_requests_logged_pop_internet_political_regime <- lm(Total.requests ~ has_twitter_office + log_gdp + political_regime + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_logged_pop_internet_political_regime)
-
-twitter_total_requests_logged_pop_internet_political_regime_factor <- lm(Total.requests ~ has_twitter_office + log_gdp + political_regime_factor + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_logged_pop_internet_political_regime_factor)
-```
-#twitterlms
-
-```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
-#twitter percentages models
-names(twitter_df_fixed)
-#original model, percent_requests
-twitter_total_requests_percent_logged_pop_internet <- lm(Total.Requests.Percentage
- ~ v2x_libdem + has_twitter_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_percent_logged_pop_internet)
-
-
-twitter_total_requests_percent_logged_pop_internet_factor <- lm(Total.Requests.Percentage
- ~ v2x_libdem + has_twitter_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime_factor + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_percent_logged_pop_internet_factor)
-
-
-twitter_total_requests_percent_logged_pop_internet_libdem <- lm(Total.Requests.Percentage
- ~ v2x_libdem + has_twitter_office + log_gdp + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_percent_logged_pop_internet_libdem)
-
-twitter_total_requests_percent_logged_pop_internet_smgosvsmmon <- lm(Total.Requests.Percentage
- ~  has_twitter_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_percent_logged_pop_internet_smgosvsmmon)
-
-twitter_total_requests_percent_logged_pop_internet_smarrest <- lm(Total.Requests.Percentage
- ~ has_twitter_office + log_gdp + v2smarrest + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_percent_logged_pop_internet_smarrest)
-
-twitter_total_requests_percent_logged_pop_internet_political_regime <- lm(Total.Requests.Percentage
- ~ has_twitter_office + log_gdp + political_regime + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_percent_logged_pop_internet_political_regime)
-
-
-twitter_total_requests_percent_logged_pop_internet_political_regime_factor <- lm(Total.Requests.Percentage
- ~ has_twitter_office + log_gdp + political_regime_factor + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_percent_logged_pop_internet_political_regime_factor)
-
-
-#Base Model
-
-
-twitter_total_requests_percent_logged_pop_internet_base <- lm(Total.Requests.Percentage
- ~ log_gdp + Date + log_pop_on_internet, data = twitter_df_fixed)
-summary(twitter_total_requests_percent_logged_pop_internet_base)
-```
-
-
-```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
-#names(twitter_df_fixed)
-twitter_felm_total_requests_percentage_v2x_libdem <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2x_libdem | Date + country_code, data = twitter_df_fixed)
-summary(twitter_felm_total_requests_percentage_v2x_libdem)
-
-
-twitter_felm_total_requests_percentage_v2smgovsmmon <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2smgovsmmon | Date + country_code, data = twitter_df_fixed)
-summary(twitter_felm_total_requests_percentage_v2smgovsmmon)
-
-
-twitter_felm_total_requests_percentage_v2smgovfilcap <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2smgovfilcap | Date + country_code, data = twitter_df_fixed)
-summary(twitter_felm_total_requests_percentage_v2smgovfilcap)
-
-twitter_felm_total_requests_percentage_v2smarrest <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + v2smarrest | Date + country_code, data = twitter_df_fixed)
-summary(twitter_felm_total_requests_percentage_v2smarrest)
-
-
-
-
-#country effects only
-
-
-twitter_felm_total_requests_percentage_country_effects_v2x_libdem <- felm(Total.Requests.Percentage ~   v2x_libdem + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = twitter_df_fixed)
-summary(twitter_felm_total_requests_percentage_country_effects_v2x_libdem)
-
-
-twitter_felm_total_requests_percentage_country_effects_v2smgovsmmon <- felm(Total.Requests.Percentage ~   v2smgovsmmon + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = twitter_df_fixed)
-summary(twitter_felm_total_requests_percentage_country_effects_v2smgovsmmon)
-
-twitter_felm_total_requests_percentage_country_effects_v2smgovfilcap <- felm(Total.Requests.Percentage ~   v2smgovfilcap + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = twitter_df_fixed)
-summary(twitter_felm_total_requests_percentage_country_effects_v2smgovfilcap)
-
-twitter_felm_total_requests_percentage_country_effects_v2smarrest <- felm(Total.Requests.Percentage ~   v2smarrest + Date + log_gdp + log_pop_on_internet + v2x_libdem | country_code, data = twitter_df_fixed)
-summary(twitter_felm_total_requests_percentage_country_effects_v2smarrest)
-
-#End Twitter Modeling
-```
-
-
-
-
-
-
-
-
-
 ```{r,echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
 #new conflict modeling starts here
 
@@ -1817,349 +1620,6 @@ acled_df |> left_join(twitter_df_fixed, by= c("country_code" = "country_code", "
 ```
 
 
-# fb conflict modeling starts here
-
-```{r}
-
-#EVERYTHING model
-total_requests_logged_pop_internet <- lm(Total.Requests ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet + total_events , data = facebook_acled_df)
-summary(total_requests_logged_pop_internet)
-```
-
-```{r}
-
-#Note: political_regime_factor seems to break the felm model
-
-# EVERYTHING model with political regime as factor
-total_requests_logged_pop_internet_factor <- lm(Total.Requests ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime_factor + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_logged_pop_internet_factor)
-
-```
-#fb lms
-```{r}
-
-total_requests_logged_pop_internet_libdem <- lm(Total.Requests ~ v2x_libdem + has_facebook_office + log_gdp + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_logged_pop_internet_libdem)
-
-total_requests_logged_pop_internet_smgosvsmmon <- lm(Total.Requests ~  has_facebook_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_logged_pop_internet_smgosvsmmon)
-
-total_requests_logged_pop_internet_smarrest <- lm(Total.Requests ~ has_facebook_office + log_gdp + v2smarrest + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_logged_pop_internet_smarrest)
-
-total_requests_logged_pop_internet_political_regime <- lm(Total.Requests ~ has_facebook_office + log_gdp + political_regime + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_logged_pop_internet_political_regime)
-
-total_requests_logged_pop_internet_political_regime_factor <- lm(Total.Requests ~ has_facebook_office + log_gdp + political_regime_factor + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_logged_pop_internet_political_regime)
-
-
-```
-
-
-```{r}
-
-#facebook acled_df is only ETH data?
-twitter_df_fixed
-facebook_acled_df
-```
-
-#Percentage Requests Start Here
-```{r}
-#original model, percent_requests
-total_requests_percent_logged_pop_internet <- lm(Total.Requests.Percentage ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_percent_logged_pop_internet)
-
-
-total_requests_percent_logged_pop_internet_factor <- lm(Total.Requests.Percentage ~ v2x_libdem + has_facebook_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime_factor + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_percent_logged_pop_internet_factor)
-
-
-total_requests_percent_logged_pop_internet_libdem <- lm(Total.Requests.Percentage ~ v2x_libdem + has_facebook_office + log_gdp + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_percent_logged_pop_internet_libdem)
-
-total_requests_percent_logged_pop_internet_smgosvsmmon <- lm(Total.Requests.Percentage ~  has_facebook_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_percent_logged_pop_internet_smgosvsmmon)
-
-total_requests_percent_logged_pop_internet_smarrest <- lm(Total.Requests.Percentage ~ has_facebook_office + log_gdp + v2smarrest + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_percent_logged_pop_internet_smarrest)
-
-total_requests_percent_logged_pop_internet_political_regime <- lm(Total.Requests.Percentage ~ has_facebook_office + log_gdp + political_regime + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_percent_logged_pop_internet_political_regime)
-
-
-# total_requests_percent_logged_pop_internet_political_regime_factor <- lm(Total.Requests.Percentage ~ has_facebook_office + log_gdp + political_regime_factor + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-# summary(total_requests_percent_logged_pop_internet_political_regime_factor)
-# 
-
-#Base Model
-
-
-total_requests_percent_logged_pop_internet_base <- lm(Total.Requests.Percentage ~ log_gdp + Date + log_pop_on_internet + total_events, data = facebook_acled_df)
-summary(total_requests_percent_logged_pop_internet_base)
-
-
-```
-
-
-
-```{r}
-
-
-#names(facebook_acled_df)
-#has_facebook office breaks felm
-#Date and country_code level effects
-
-felm_total_requests_percentage_v2x_libdem <- felm(Total.Requests.Percentage ~ log_gdp + log_pop_on_internet + total_events + v2x_libdem | Date + country_code , data = facebook_acled_df)
-summary(felm_total_requests_percentage_v2x_libdem)
-
-
-felm_total_requests_percentage_v2smgovsmmon <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2smgovsmmon | Date + country_code, data = facebook_acled_df)
-summary(felm_total_requests_percentage_v2smgovsmmon)
-
-
-felm_total_requests_percentage_v2smgovfilcap <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2smgovfilcap | Date + country_code, data = facebook_acled_df)
-summary(felm_total_requests_percentage_v2smgovfilcap)
-
-felm_total_requests_percentage_v2smarrest <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2smarrest | Date + country_code, data = facebook_acled_df)
-summary(felm_total_requests_percentage_v2smarrest)
-
-
-
-
-#country effects only
-
-
-felm_total_requests_percentage_country_effects_v2x_libdem <- felm(Total.Requests.Percentage ~   v2x_libdem + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = facebook_acled_df)
-summary(felm_total_requests_percentage_country_effects_v2x_libdem)
-
-
-felm_total_requests_percentage_country_effects_v2smgovsmmon <- felm(Total.Requests.Percentage ~   v2smgovsmmon + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = facebook_acled_df)
-summary(felm_total_requests_percentage_country_effects_v2smgovsmmon)
-
-felm_total_requests_percentage_country_effects_v2smgovfilcap <- felm(Total.Requests.Percentage ~   v2smgovfilcap + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = facebook_acled_df)
-summary(felm_total_requests_percentage_country_effects_v2smgovfilcap)
-
-felm_total_requests_percentage_country_effects_v2smarrest <- felm(Total.Requests.Percentage ~   v2smarrest + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = facebook_acled_df)
-summary(felm_total_requests_percentage_country_effects_v2smarrest)
-
-```
-# start Google conflict modeling
-
-```{r}
-
-google_acled_total_requests_logged_pop_internet_libdem <- lm(Total.Requests ~ v2x_libdem + has_google_office + log_gdp + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_logged_pop_internet_libdem)
-
-google_acled_total_requests_logged_pop_internet_smgosvsmmon <- lm(Total.Requests ~  has_google_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_logged_pop_internet_smgosvsmmon)
-
-google_acled_total_requests_logged_pop_internet_smarrest <- lm(Total.Requests ~ has_google_office + log_gdp + v2smarrest + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_logged_pop_internet_smarrest)
-
-google_acled_total_requests_logged_pop_internet_political_regime <- lm(Total.Requests ~ has_google_office + log_gdp + political_regime + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_logged_pop_internet_political_regime)
-
-google_acled_total_requests_logged_pop_internet_political_regime_factor <- lm(Total.Requests ~ has_google_office + log_gdp + political_regime_factor + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_logged_pop_internet_political_regime_factor)
-
-
-google_acled_total_requests_logged_pop_internet_base <- lm(Total.Requests ~ has_google_office + log_gdp  + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_logged_pop_internet_base)
-
-
-```
-# Google percentage requests models
-```{r}
-
-google_acled_df_fixed
-#original model, percent_requests
-google_acled_total_requests_percent_logged_pop_internet <- lm(Google.Total.Requests.Percentage
- ~ v2x_libdem + has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_percent_logged_pop_internet)
-
-
-google_acled_total_requests_percent_logged_pop_internet_factor <- lm(Google.Total.Requests.Percentage
- ~ v2x_libdem + has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime_factor + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_percent_logged_pop_internet_factor)
-
-
-google_acled_total_requests_percent_logged_pop_internet_libdem <- lm(Google.Total.Requests.Percentage
- ~ v2x_libdem + has_google_office + log_gdp + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_percent_logged_pop_internet_libdem)
-
-google_acled_total_requests_percent_logged_pop_internet_smgosvsmmon <- lm(Google.Total.Requests.Percentage
- ~  has_google_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_percent_logged_pop_internet_smgosvsmmon)
-
-google_acled_total_requests_percent_logged_pop_internet_smarrest <- lm(Google.Total.Requests.Percentage
- ~ has_google_office + log_gdp + v2smarrest + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_percent_logged_pop_internet_smarrest)
-
-google_acled_total_requests_percent_logged_pop_internet_political_regime <- lm(Google.Total.Requests.Percentage
- ~ has_google_office + log_gdp + political_regime + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_percent_logged_pop_internet_political_regime)
-
-
-google_acled_total_requests_percent_logged_pop_internet_political_regime_factor <- lm(Google.Total.Requests.Percentage
- ~ has_google_office + log_gdp + political_regime_factor + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_percent_logged_pop_internet_political_regime_factor)
-
-
-#Base Model
-
-
-google_acled_total_requests_percent_logged_pop_internet_base <- lm(Google.Total.Requests.Percentage
- ~ log_gdp + Date + log_pop_on_internet + total_events, data = google_acled_df_fixed)
-summary(google_acled_total_requests_percent_logged_pop_internet_base)
-
-```
-# Begin google felm modeling
-```{r}
-names(google_acled_df_fixed)
-google_acled_felm_total_requests_percentage_v2x_libdem <- felm(Google.Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2x_libdem | Date + country_code, data = google_acled_df_fixed)
-summary(google_acled_felm_total_requests_percentage_v2x_libdem)
-
-
-google_acled_felm_total_requests_percentage_v2smgovsmmon <- felm(Google.Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2smgovsmmon | Date + country_code, data = google_acled_df_fixed)
-summary(google_acled_felm_total_requests_percentage_v2smgovsmmon)
-
-
-google_acled_felm_total_requests_percentage_v2smgovfilcap <- felm(Google.Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2smgovfilcap | Date + country_code, data = google_acled_df_fixed)
-summary(google_acled_felm_total_requests_percentage_v2smgovfilcap)
-
-google_acled_felm_total_requests_percentage_v2smarrest <- felm(Google.Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2smarrest | Date + country_code, data = google_acled_df_fixed)
-summary(google_acled_felm_total_requests_percentage_v2smarrest)
-
-
-
-
-#country effects only
-
-
-google_acled_felm_total_requests_percentage_country_effects_v2x_libdem <- felm(Google.Total.Requests.Percentage ~   v2x_libdem + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = google_acled_df_fixed)
-summary(google_acled_felm_total_requests_percentage_country_effects_v2x_libdem)
-
-
-google_acled_felm_total_requests_percentage_country_effects_v2smgovsmmon <- felm(Google.Total.Requests.Percentage ~   v2smgovsmmon + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = google_acled_df_fixed)
-summary(google_acled_felm_total_requests_percentage_country_effects_v2smgovsmmon)
-
-google_acled_felm_total_requests_percentage_country_effects_v2smgovfilcap <- felm(Google.Total.Requests.Percentage ~   v2smgovfilcap + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = google_acled_df_fixed)
-summary(google_acled_felm_total_requests_percentage_country_effects_v2smgovfilcap)
-
-google_acled_felm_total_requests_percentage_country_effects_v2smarrest <- felm(Google.Total.Requests.Percentage ~   v2smarrest + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = google_acled_df_fixed)
-summary(google_acled_felm_total_requests_percentage_country_effects_v2smarrest)
-#end google conflict modeling
-```
-
-
-
-
-
-
-# start twitter modeling
-
-```{r}
-
-twitter_acled_total_requests_logged_pop_internet_libdem <- lm(Total.requests ~ v2x_libdem + has_twitter_office + log_gdp + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_logged_pop_internet_libdem)
-
-twitter_acled_total_requests_logged_pop_internet_smgosvsmmon <- lm(Total.requests ~  has_twitter_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_logged_pop_internet_smgosvsmmon)
-
-twitter_acled_total_requests_logged_pop_internet_smarrest <- lm(Total.requests ~ has_twitter_office + log_gdp + v2smarrest + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_logged_pop_internet_smarrest)
-
-twitter_acled_total_requests_logged_pop_internet_political_regime <- lm(Total.requests ~ has_twitter_office + log_gdp + political_regime + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_logged_pop_internet_political_regime)
-
-twitter_acled_total_requests_logged_pop_internet_political_regime_factor <- lm(Total.requests ~ has_twitter_office + log_gdp + political_regime_factor + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_logged_pop_internet_political_regime_factor)
-```
-
-# twitter percentages models
-```{r}
-
-names(twitter_acled_df_fixed)
-#original model, percent_requests
-twitter_acled_total_requests_percent_logged_pop_internet <- lm(Total.Requests.Percentage
- ~ v2x_libdem + has_twitter_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_percent_logged_pop_internet)
-
-
-twitter_acled_total_requests_percent_logged_pop_internet_factor <- lm(Total.Requests.Percentage
- ~ v2x_libdem + has_twitter_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime_factor + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_percent_logged_pop_internet_factor)
-
-
-twitter_acled_total_requests_percent_logged_pop_internet_libdem <- lm(Total.Requests.Percentage
- ~ v2x_libdem + has_twitter_office + log_gdp + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_percent_logged_pop_internet_libdem)
-
-twitter_acled_total_requests_percent_logged_pop_internet_smgosvsmmon <- lm(Total.Requests.Percentage
- ~  has_twitter_office + log_gdp + v2smgovsmmon + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_percent_logged_pop_internet_smgosvsmmon)
-
-twitter_acled_total_requests_percent_logged_pop_internet_smarrest <- lm(Total.Requests.Percentage
- ~ has_twitter_office + log_gdp + v2smarrest + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_percent_logged_pop_internet_smarrest)
-
-twitter_acled_total_requests_percent_logged_pop_internet_political_regime <- lm(Total.Requests.Percentage
- ~ has_twitter_office + log_gdp + political_regime + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_percent_logged_pop_internet_political_regime)
-
-
-twitter_acled_total_requests_percent_logged_pop_internet_political_regime_factor <- lm(Total.Requests.Percentage
- ~ has_twitter_office + log_gdp + political_regime_factor + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_percent_logged_pop_internet_political_regime_factor)
-
-
-#Base Model
-
-
-twitter_acled_total_requests_percent_logged_pop_internet_base <- lm(Total.Requests.Percentage
- ~ log_gdp + Date + log_pop_on_internet + total_events, data = twitter_acled_df_fixed)
-summary(twitter_acled_total_requests_percent_logged_pop_internet_base)
-```
-
-
-```{r}
-names(twitter_acled_df_fixed)
-twitter_acled_felm_total_requests_percentage_v2x_libdem <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2x_libdem | Date + country_code, data = twitter_acled_df_fixed)
-summary(twitter_acled_felm_total_requests_percentage_v2x_libdem)
-
-
-twitter_acled_felm_total_requests_percentage_v2smgovsmmon <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2smgovsmmon | Date + country_code, data = twitter_acled_df_fixed)
-summary(twitter_acled_felm_total_requests_percentage_v2smgovsmmon)
-
-
-twitter_acled_felm_total_requests_percentage_v2smgovfilcap <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2smgovfilcap | Date + country_code, data = twitter_acled_df_fixed)
-summary(twitter_acled_felm_total_requests_percentage_v2smgovfilcap)
-
-twitter_acled_felm_total_requests_percentage_v2smarrest <- felm(Total.Requests.Percentage ~  log_gdp + log_pop_on_internet + total_events + v2smarrest | Date + country_code, data = twitter_acled_df_fixed)
-summary(twitter_acled_felm_total_requests_percentage_v2smarrest)
-
-
-
-
-#country effects only
-
-
-twitter_acled_felm_total_requests_percentage_country_effects_v2x_libdem <- felm(Total.Requests.Percentage ~   v2x_libdem + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = twitter_acled_df_fixed)
-summary(twitter_acled_felm_total_requests_percentage_country_effects_v2x_libdem)
-
-
-twitter_acled_felm_total_requests_percentage_country_effects_v2smgovsmmon <- felm(Total.Requests.Percentage ~   v2smgovsmmon + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = twitter_acled_df_fixed)
-summary(twitter_acled_felm_total_requests_percentage_country_effects_v2smgovsmmon)
-
-twitter_acled_felm_total_requests_percentage_country_effects_v2smgovfilcap <- felm(Total.Requests.Percentage ~   v2smgovfilcap + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = twitter_acled_df_fixed)
-summary(twitter_acled_felm_total_requests_percentage_country_effects_v2smgovfilcap)
-
-twitter_acled_felm_total_requests_percentage_country_effects_v2smarrest <- felm(Total.Requests.Percentage ~   v2smarrest + Date + log_gdp + log_pop_on_internet + total_events + v2x_libdem | country_code, data = twitter_acled_df_fixed)
-summary(twitter_acled_felm_total_requests_percentage_country_effects_v2smarrest)
-
-#end twitter conflict modeling
-```
 
 ```{r}
 library(readxl)
@@ -2226,8 +1686,7 @@ compare_dataframes(twitter_acled_df_fixed,google_acled_df_fixed)
 #date needs to be 2023 - 2015
 #convert year into date, will need to apply year data to both beginning and end of year data
 names(raw_data)
-raw_data |> dplyr::filter(indicator == "va") |>
-  dplyr::select(c("code", "year", "eiu", "frh", "prs", "ipd")) |>
+raw_data |> dplyr::select(c("code", "year", "eiu", "frh", "prs", "ipd")) |>
   dplyr::filter(year >= 2015 & year <= 2023) -> wgi_df
 
 
@@ -2236,204 +1695,26 @@ raw_data |> dplyr::filter(indicator == "va") |>
 
 ```{r}
 #join wgi_df to twitter, google and facebook data
-#names(wgi_df) #code, year
-#names(twitter_acled_df_fixed) #country_code, year
-#wgi_df
-twitter_acled_df_fixed |> left_join(wgi_df, by = c("country_code" = "code", "year" = "year")) -> twitter_wgi_df
+names(wgi_df) #code, year
+names(twitter_acled_df_fixed) #country_code, year
+wgi_df
+twitter_acled_df_fixed |> left_join(wgi_df, by = c("country_code" = "code", "year" = "year"))
+twitter_acled_df_fixed
 
-facebook_acled_df |> left_join(wgi_df, by = c("country_code" = "code", "year" = "year")) -> facebook_wgi_df
-
-google_acled_df_fixed |> left_join(wgi_df, by = c("country_code" = "code", "year" = "year")) -> google_wgi_df
-
-
-#twitter_acled_df_fixed 
-
-```
-
-#example of how multicollinearity test is run
-```{r, echo = FALSE, message = FALSE, results = 'hide', warning = FALSE}
-# 
-# #  Multicollinearity testing
-# 
-# # VIF scores of 5-10 or higher indicate high multicollinearity, 
-# # cor function allows you to see correlation between individual variables. closer to 1 or to -1 indicate high correlation
-# 
-# # vdem scores show high multicollinearity, should run separate models for each of the 
-# 
-# 
-# 
-# sapply(model_df_cut_cols, function(x) sum(is.na(x)))
-# #5-10 or higher = multicollinearity issues
-# vif(total_requests_all_vars)
-# vif(total_requests_logged_vars)
-# 
-# 
-# numeric_vars <- model_df_cut_cols[, c("v2x_libdem", "v2smgovsmmon", "v2smarrest", "political_regime","GDP", "population", "v2smgovfilcap")]
-# cor(numeric_vars)
-# 
-# ols_eigen_cindex(total_requests_all_vars)
-
-
-```
-
-```{r}
-#first make model, then run vif on model to analyze multicollinearity
-
-vif(twitter_wgi_df)
-```
-#google model tests
-```{r}
-names(google_wgi_df)
 ```
 
 
 ```{r}
-#VERSION 1
+
+
+
+
+summary(twitter_acled_df_fixed$Date)
+summary(google_acled_df_fixed$Date)
+summary(facebook_acled_df$Date)
+
+summary(twitter_acled_df_fixed)
 google_acled_df_fixed
-#original model, percent_requests
-google_wgi_total_requests_percent_logged_pop_internet <- lm(Google.Total.Requests.Percentage
- ~ v2x_libdem + has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet + total_events + eiu + frh + prs + ipd, data = google_wgi_df)
-
-google_wgi_total_requests_logged_pop_internet <- lm(Total.Requests
- ~ v2x_libdem + has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet + total_events + eiu + frh + prs + ipd, data = google_wgi_df)
-
-summary(google_wgi_total_requests_percent_logged_pop_internet)
-summary(google_wgi_total_requests_logged_pop_internet)
-
-vif(google_wgi_total_requests_percent_logged_pop_internet) 
-
-# frh, v2libdem, log_gdp, log pop internet, eiu over 10 VIF
-# v2smgovsmmon, v2smarrest, ipd,  political_regime all over 5
-#next step is to try removing some of these and prune to limit multicollinearity
-```
-
-```{r}
-#VERSION 2 no eiu
-# google_wgi_total_requests_percent_logged_pop_internet2 <- lm(Google.Total.Requests.Percentage
-#  ~ v2x_libdem + has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet + total_events + eiu + prs + ipd, data = google_wgi_df)
-# vif(google_wgi_total_requests_percent_logged_pop_internet2) 
-
-#v3 no v2xlibdem
-
-# google_wgi_total_requests_percent_logged_pop_internet3 <- lm(Google.Total.Requests.Percentage
-#  ~ has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ v2smarrest+ political_regime + Date + log_pop_on_internet + total_events + eiu + prs + ipd, data = google_wgi_df)
-# vif(google_wgi_total_requests_percent_logged_pop_internet3) 
-#v4 no smarrest - highest = 6.28 AFTER REPLACING LOG POP INTERNET WITH POP INTERNET
-
-# google_wgi_total_requests_percent_pop_internet4 <- lm(Google.Total.Requests.Percentage
-#  ~ has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ political_regime + Date + pop_on_internet + total_events + eiu + prs + ipd, data = google_wgi_df)
-# vif(google_wgi_total_requests_percent_pop_internet4) 
-
-#v5 no eiu 
-# google_wgi_total_requests_percent_pop_internet5 <- lm(Google.Total.Requests.Percentage
-#  ~ has_google_office + log_gdp + v2smgovsmmon+v2smgovfilcap+ political_regime + Date + pop_on_internet + total_events + prs + ipd, data = google_wgi_df)
-# vif(google_wgi_total_requests_percent_pop_internet5) 
-
-#VARIABLES IN MODEL 5 SATISFY MULTICOLLINEARITY, COULD INCLUDE OR NOT INCLUDE SMGOVSMMON OR SMGOVFILCAP
-
-#eiu, but no smogov or smfilcap
-# google_wgi_total_requests_percent_pop_internet6 <- lm(Google.Total.Requests.Percentage
-#  ~ has_google_office + log_gdp + eiu + political_regime + Date + pop_on_internet + total_events + prs + ipd, data = google_wgi_df)
-# vif(google_wgi_total_requests_percent_pop_internet6) 
-
-
-# google_wgi_total_requests_percent_pop_internet7 <- lm(Google.Total.Requests.Percentage
-#  ~ has_google_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs + ipd, data = google_wgi_df)
-# vif(google_wgi_total_requests_percent_pop_internet7) 
-
-
-
-# has_google_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs,
-google_wgi_total_requests_percent_pop_internet8 <- lm(Google.Total.Requests.Percentage
- ~ has_google_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs, data = google_wgi_df)
-vif(google_wgi_total_requests_percent_pop_internet8)
-
-google_wgi_total_requests_pop_internet8 <- lm(Total.Requests
- ~ has_google_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs, data = google_wgi_df)
-vif(google_wgi_total_requests_pop_internet8)
-
-
-```
-
-
-#Twitter LMs - WGI
-```{r}
-names(twitter_wgi_df)
-twitter_wgi_total_requests_percentage <- lm(Total.Requests.Percentage
- ~ has_twitter_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs, data = twitter_wgi_df)
-summary(twitter_wgi_total_requests_percentage)
-
-
-twitter_wgi_total_requests <- lm(Total.requests
- ~ has_twitter_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs, data = twitter_wgi_df)
-summary(twitter_wgi_total_requests)
-
-
-
-
-```
-
-# Twitter Felms - WGI
-```{r}
-
-
-
-twitter_wgi_total_requests_percentage_felm <- felm(Total.Requests.Percentage ~  log_gdp + eiu + pop_on_internet + total_events + prs | Date + country_code, data = twitter_wgi_df)
-summary(twitter_wgi_total_requests_percentage_felm)
-
-twitter_wgi_total_requests_felm <- felm(Total.requests ~  log_gdp + eiu + pop_on_internet + total_events + prs | Date + country_code, data = twitter_wgi_df)
-summary(twitter_wgi_total_requests_felm)
-
-
-```
-
-#Google LMs - WGI
-```{r}
-google_wgi_total_requests_percent_pop_internet <- lm(Google.Total.Requests.Percentage
- ~ has_google_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs, data = google_wgi_df)
-summary(google_wgi_total_requests_percent_pop_internet)
-
-google_wgi_total_requests_pop_internet <- lm(Total.Requests
- ~ has_google_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs, data = google_wgi_df)
-summary(google_wgi_total_requests_pop_internet)
-```
-
-
-# Google Felms -  WGI
-```{r}
-
-google_felm_total_requests_percentage_wgi <- felm(Google.Total.Requests.Percentage ~ log_gdp + eiu + pop_on_internet + total_events + prs | Date + country_code, data = google_wgi_df)
-summary(google_felm_total_requests_percentage_v2smgovsmmon)
-
-
-google_felm_total_requests_wgi <- felm(Total.Requests ~ log_gdp + eiu + pop_on_internet + total_events + prs | Date + country_code, data = google_wgi_df)
-summary(google_felm_total_requests_percentage_v2smgovsmmon)
-
-
-```
-
-#Facebook LMs - WGI
-
-```{r}
-
-facebook_wgi_total_requests_percent_pop_internet <- lm(Total.Requests.Percentage
- ~ has_facebook_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs, data = facebook_wgi_df)
-summary(facebook_wgi_total_requests_percent_pop_internet)
-
-facebook_wgi_total_requests_pop_internet <- lm(Total.Requests
- ~ has_facebook_office + log_gdp + eiu  + Date + pop_on_internet + total_events + prs, data = facebook_wgi_df)
-summary(facebook_wgi_total_requests_pop_internet)
-```
-
-#Facebook Felms - WGI
-
-```{r}
-
-facebook_felm_total_requests_percentage_wgi <- felm(Total.Requests.Percentage ~ log_gdp + eiu + pop_on_internet + total_events + prs | Date + country_code, data = facebook_wgi_df)
-summary(facebook_felm_total_requests_percentage_wgi)
-
-
-facebook_felm_total_requests_wgi <- felm(Total.Requests ~ log_gdp + eiu + pop_on_internet + total_events + prs | Date + country_code, data = facebook_wgi_df)
-summary(facebook_felm_total_requests_wgi)
+facebook_acled_df
 ```
 
